@@ -37,7 +37,7 @@ def init_ee():
                 temp_file               # Path to credentials file
             )
             ee.Initialize(credentials)
-            print(f"✓ Earth Engine initialized with project: {creds.get('project_id', 'unknown')}")
+            print(f"Earth Engine initialized with project: {creds.get('project_id', 'unknown')}")
             return True
         finally:
             # Clean up temp file
