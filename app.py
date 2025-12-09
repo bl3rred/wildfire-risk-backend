@@ -13,31 +13,23 @@ CORS(app)
 
 def init_ee():
     try:
-        import os
-        import json
+        import os, json
         
-        credentials_json = os.environ.get('EE_CREDENTIALS')
-        
-        if credentials_json:
-            # Parse and use OAuth2 credentials
-            creds = json.loads(credentials_json)
-            
-            # Method 1: Use ServiceAccountCredentials
+        creds_json = os.environ.get('EE_CREDENTIALS')
+        if creds_json:
+            creds = json.loads(creds_json)
             credentials = ee.ServiceAccountCredentials(
-                '',  # Empty for OAuth
+                creds['client_email'],  # Important: use client_email
                 key_data=json.dumps(creds)
             )
             ee.Initialize(credentials)
-            
+            print("✓ Earth Engine initialized with service account")
+            return True
         else:
-            # Fallback
             ee.Initialize()
-            
-        print("✓ Earth Engine initialized")
-        return True
-        
+            return True
     except Exception as e:
-        print(f"✗ Earth Engine init failed: {e}")
+        print(f"✗ EE Error: {e}")
         return False
 
 
