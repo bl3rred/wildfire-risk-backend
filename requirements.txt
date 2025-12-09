@@ -1,3 +1,6 @@
 flask==3.0.0
 flask-cors==4.0.0
+torch==2.2.1 --index-url https://download.pytorch.org/whl/cpu
+numpy==1.26.4
+pillow==10.2.0
 requests==2.31.0
