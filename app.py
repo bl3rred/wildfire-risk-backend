@@ -19,7 +19,7 @@ def init_ee():
         # Get credentials from environment variable
         creds_json = os.environ.get('EE_CREDENTIALS')
         if not creds_json:
-            print(⚠️ No EE_CREDENTIALS environment variable found")
+            print("No EE_CREDENTIALS environment variable found")
             return False
             
         # Parse the JSON
