@@ -12,35 +12,33 @@ app = Flask(__name__)
 CORS(app)
 
 def init_ee():
-    """Initialize Earth Engine with OAuth credentials"""
     try:
-        # For Railway deployment, use environment variable
+        import os
+        import json
+        
         credentials_json = os.environ.get('EE_CREDENTIALS')
         
         if credentials_json:
-            # Parse credentials from environment variable
-            creds_dict = json.loads(credentials_json)
-            credentials = ee.oauth.Credentials(
-                client_id=creds_dict.get('client_id'),
-                client_secret=creds_dict.get('client_secret'),
-                refresh_token=creds_dict.get('refresh_token')
+            # Parse and use OAuth2 credentials
+            creds = json.loads(credentials_json)
+            
+            # Method 1: Use ServiceAccountCredentials
+            credentials = ee.ServiceAccountCredentials(
+                '',  # Empty for OAuth
+                key_data=json.dumps(creds)
             )
             ee.Initialize(credentials)
+            
         else:
-            # Fallback to default authentication (for local testing)
-            # ADD YOUR PROJECT NAME HERE:
-            ee.Initialize(project='disaster-risk-assesment')  # Or your project name
-        
-        print("✓ Earth Engine initialized successfully")
-        return True
-    except Exception as e:
-        print(f"✗ Earth Engine initialization failed: {e}")
-        # Try one more time with just basic init
-        try:
+            # Fallback
             ee.Initialize()
-            return True
-        except:
-            return False
+            
+        print("✓ Earth Engine initialized")
+        return True
+        
+    except Exception as e:
+        print(f"✗ Earth Engine init failed: {e}")
+        return False
 
 
 # ... rest of the backend code stays the same ...
