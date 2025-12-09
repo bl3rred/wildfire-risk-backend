@@ -44,7 +44,7 @@ def init_ee():
             os.unlink(temp_file)
             
     except Exception as e:
-        print(f"✗ Earth Engine initialization failed: {str(e)[:100]}")  # Truncate long errors
+        print(f"Earth Engine initialization failed: {str(e)[:100]}")  # Truncate long errors
         return False
 
 # ... rest of the backend code stays the same ...
