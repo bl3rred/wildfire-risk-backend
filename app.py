@@ -12,26 +12,40 @@ app = Flask(__name__)
 CORS(app)
 
 def init_ee():
+    """Initialize Google Earth Engine with service account"""
     try:
-        import os, json
+        import os, json, tempfile
         
+        # Get credentials from environment variable
         creds_json = os.environ.get('EE_CREDENTIALS')
-        if creds_json:
-            creds = json.loads(creds_json)
+        if not creds_json:
+            print(⚠️ No EE_CREDENTIALS environment variable found")
+            return False
+            
+        # Parse the JSON
+        creds = json.loads(creds_json)
+        
+        # Save to temporary file (handles \n in private key)
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+            json.dump(creds, f, indent=2)
+            temp_file = f.name
+        
+        try:
+            # Initialize Earth Engine with the temp file
             credentials = ee.ServiceAccountCredentials(
-                creds['client_email'],  # Important: use client_email
-                key_data=json.dumps(creds)
+                creds['client_email'],  # Service account email
+                temp_file               # Path to credentials file
             )
             ee.Initialize(credentials)
-            print("✓ Earth Engine initialized with service account")
+            print(f"✓ Earth Engine initialized with project: {creds.get('project_id', 'unknown')}")
             return True
-        else:
-            ee.Initialize()
-            return True
+        finally:
+            # Clean up temp file
+            os.unlink(temp_file)
+            
     except Exception as e:
-        print(f"✗ EE Error: {e}")
+        print(f"✗ Earth Engine initialization failed: {str(e)[:100]}")  # Truncate long errors
         return False
-
 
 # ... rest of the backend code stays the same ...
 
