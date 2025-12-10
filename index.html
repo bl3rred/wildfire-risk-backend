@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Wildfire Risk Assessment</title>
+    <style>
+        * { font-family: Arial, sans-serif; }
+        body { max-width: 800px; margin: 40px auto; padding: 20px; }
+        input, button { padding: 12px; margin: 8px 0; font-size: 16px; }
+        input { width: 200px; border: 1px solid #ccc; border-radius: 4px; }
+        button { background: #ff6b35; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #e55a2b; }
+        #result { margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px; }
+        .metric { background: white; padding: 15px; margin: 10px 0; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .risk-high { color: #d63031; }
+        .risk-medium { color: #f39c12; }
+        .risk-low { color: #27ae60; }
+        .loading { color: #666; font-style: italic; }
+        .error { color: #d63031; background: #ffebee; padding: 10px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <h1>🔥 Wildfire & Flood Risk Assessment</h1>
+    <p>Analyze satellite data for any location worldwide</p>
+    
+    <div>
+        <input id="lat" placeholder="Latitude" value="39.8">
+        <input id="lng" placeholder="Longitude" value="-121.4">
+        <button onclick="analyze()">Analyze Location</button>
+    </div>
+    
+    <div id="result">
+        <p class="loading">Enter coordinates and click "Analyze Location"</p>
+    </div>
+
+    <script>
+        // YOUR BACKEND URL
+        const API_URL = 'https://wildfire-risk-backend.onrender.com';
+        
+        async function analyze() {
+            const lat = document.getElementById('lat').value;
+            const lng = document.getElementById('lng').value;
+            const resultDiv = document.getElementById('result');
+            
+            resultDiv.innerHTML = '<p class="loading">🛰️ Fetching satellite data... This may take 20-30 seconds</p>';
+            
+            try {
+                const response = await fetch(`${API_URL}/analyze`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        lat: parseFloat(lat),
+                        lng: parseFloat(lng),
+                        buffer_km: 5
+                    })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Analysis failed');
+                }
+                
+                const data = await response.json();
+                displayResults(data, lat, lng);
+                
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        ❌ Error: ${error.message}
+                        <br><small>Backend: ${API_URL}</small>
+                    </div>
+                `;
+            }
+        }
+        
+        function displayResults(data, lat, lng) {
+            const wildfireRisk = data.predictions?.wildfire_risk * 100 || 0;
+            const floodRisk = data.predictions?.flood_risk * 100 || 0;
+            
+            // Determine risk levels
+            const wildfireLevel = wildfireRisk > 70 ? 'high' : wildfireRisk > 30 ? 'medium' : 'low';
+            const floodLevel = floodRisk > 70 ? 'high' : floodRisk > 30 ? 'medium' : 'low';
+            
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `
+                <h2>📊 Analysis Results</h2>
+                
+                <div class="metric">
+                    <h3>🔥 Wildfire Risk: <span class="risk-${wildfireLevel}">${wildfireRisk.toFixed(1)}%</span></h3>
+                    <div style="background: #eee; height: 20px; border-radius: 10px; margin: 10px 0;">
+                        <div style="width: ${wildfireRisk}%; background: ${wildfireRisk > 70 ? '#d63031' : wildfireRisk > 30 ? '#f39c12' : '#27ae60'}; 
+                            height: 100%; border-radius: 10px;"></div>
+                    </div>
+                    ${wildfireRisk > 70 ? '⚠️ High fire danger' : wildfireRisk > 30 ? '⚠️ Moderate fire risk' : '✅ Low fire risk'}
+                </div>
+                
+                <div class="metric">
+                    <h3>🌊 Flood Risk: <span class="risk-${floodLevel}">${floodRisk.toFixed(1)}%</span></h3>
+                    <div style="background: #eee; height: 20px; border-radius: 10px; margin: 10px 0;">
+                        <div style="width: ${floodRisk}%; background: ${floodRisk > 70 ? '#3498db' : floodRisk > 30 ? '#2980b9' : '#27ae60'}; 
+                            height: 100%; border-radius: 10px;"></div>
+                    </div>
+                    ${floodRisk > 70 ? '⚠️ High flood risk' : floodRisk > 30 ? '⚠️ Moderate flood risk' : '✅ Low flood risk'}
+                </div>
+                
+                <div style="margin-top: 20px; color: #666; font-size: 14px;">
+                    <p>📍 Coordinates: ${lat}, ${lng}</p>
+                    <p>⏰ Analysis time: ${new Date().toLocaleString()}</p>
+                    <p>📡 Powered by Google Earth Engine & PyTorch AI</p>
+                </div>
+                
+                <button onclick="analyze()" style="margin-top: 20px;">🔄 Analyze Another Location</button>
+            `;
+        }
+    </script>
+</body>
+</html>
