@@ -745,18 +745,18 @@ if __name__ == '__main__':
     EE_INITIALIZED = init_ee()
     
     if not EE_INITIALIZED:
-        print("✗ WARNING: Earth  Engine not initialized. Set EE_CREDENTIALS environment variable.")
-	
-	    print("\n" + "=" * 70)
-    	print("STARTING SERVER...")
-    	print("=" * 70)
-    	print("\nEndpoints:")
-    	print("  GET  /health           - System health check")
-    	print("  POST /geocode          - Convert address to coordinates")
-    	print("  POST /analyze          - Comprehensive risk analysis")
-    	print("\nServer running on: http://0.0.0.0:5000")
-    	print("Press CTRL+C to stop")
-    	print("=" * 70)
-    	print()
+        print("✗ WARNING: Earth Engine not initialized. Set EE_CREDENTIALS environment variable.")
     
-    	app.run(host='0.0.0.0', port=5000, debug=False)
+    print("\n" + "=" * 70)
+    print("STARTING SERVER...")
+    print("=" * 70)
+    print("\nEndpoints:")
+    print("  GET  /health           - System health check")
+    print("  POST /geocode          - Convert address to coordinates")
+    print("  POST /analyze          - Comprehensive risk analysis")
+    print("\nServer running on: http://0.0.0.0:5000")
+    print("Press CTRL+C to stop")
+    print("=" * 70)
+    print()
+    
+    app.run(host='0.0.0.0', port=5000, debug=False)
