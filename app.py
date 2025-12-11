@@ -92,33 +92,62 @@ EE_INITIALIZED = False
 def geocode_address(address):
     """
     Convert address/location name to coordinates using Nominatim (OpenStreetMap)
-    Free API, no key required
+    Supports: city, state, full address
     """
+    import time
+    
     try:
-        url = "https://nominatim.openstreetmap.org/search"
-        params = {
-            'q': address,
-            'format': 'json',
-            'limit': 1
-        }
-        headers = {
-            'User-Agent': 'WildfireFloodRiskAssessment/1.0'
-        }
+        # Clean the address
+        address = address.strip()
         
-        response = requests.get(url, params=params, headers=headers, timeout=5)
-        response.raise_for_status()
+        # Try multiple search strategies
+        search_queries = [
+            address,  # Original
+            address.replace(',', ''),  # Without commas
+            f"{address}, USA"  # Add country
+        ]
         
-        data = response.json()
-        if data and len(data) > 0:
-            result = data[0]
-            return {
-                'lat': float(result['lat']),
-                'lng': float(result['lon']),
-                'display_name': result['display_name'],
-                'type': result.get('type', 'unknown')
+        for query in search_queries:
+            url = "https://nominatim.openstreetmap.org/search"
+            params = {
+                'q': query,
+                'format': 'json',
+                'limit': 1,
+                'addressdetails': 1
             }
-        else:
-            return None
+            headers = {
+                'User-Agent': 'WildfireFloodRiskAssessment/1.0 (Educational Project)',
+                'Accept': 'application/json'
+            }
+            
+            print(f"Geocoding attempt: {query}")
+            
+            response = requests.get(url, params=params, headers=headers, timeout=10)
+            response.raise_for_status()
+            
+            data = response.json()
+            
+            if data and len(data) > 0:
+                result = data[0]
+                print(f"✓ Found: {result['display_name']}")
+                return {
+                    'lat': float(result['lat']),
+                    'lng': float(result['lon']),
+                    'display_name': result['display_name'],
+                    'type': result.get('type', 'unknown'),
+                    'address': result.get('address', {})
+                }
+            
+            # Rate limit: wait 1 second between attempts
+            time.sleep(1)
+        
+        # If all attempts failed
+        print(f"✗ No results found for: {address}")
+        return None
+        
+    except requests.exceptions.Timeout:
+        print(f"Geocoding timeout for: {address}")
+        return None
     except Exception as e:
         print(f"Geocoding failed: {e}")
         return None
