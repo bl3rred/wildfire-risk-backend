@@ -91,66 +91,91 @@ EE_INITIALIZED = False
 
 def geocode_address(address):
     """
-    Convert address/location name to coordinates using Nominatim (OpenStreetMap)
-    Supports: city, state, full address
+    Primary geocoder for your backend. Tries OpenStreetMap first,
+    falls back to US Census Bureau. Returns lat/lng or None.
     """
-    import time
-    
+    # Normalize the input address
+    address = ', '.join([part.strip() for part in address.split(',') if part.strip()])
+    print(f"  → Geocoding: '{address}'")
+
+    # --- Attempt 1: OpenStreetMap (Nominatim) ---
     try:
-        # Clean the address
-        address = address.strip()
-        
-        # Try multiple search strategies
-        search_queries = [
-            address,  # Original
-            address.replace(',', ''),  # Without commas
-            f"{address}, USA"  # Add country
-        ]
-        
-        for query in search_queries:
-            url = "https://nominatim.openstreetmap.org/search"
+        parts = [p.strip() for p in address.split(',')]
+        has_street = False
+        if len(parts) > 0:
+            first_part = parts[0].lower()
+            street_indicators = ['ave', 'st', 'rd', 'ln', 'dr', 'blvd', 'way', 'ct', 'hw', 'route']
+            has_street = any(char.isdigit() for char in first_part) or any(ind in first_part for ind in street_indicators)
+
+        url = "https://nominatim.openstreetmap.org/search"
+        headers = {
+            'User-Agent': 'WildfireFloodRiskAssessment/1.0 (contact: rfarrales25@gmail.com)'  # Your email
+        }
+
+        if has_street and len(parts) >= 2:
             params = {
-                'q': query,
-                'format': 'json',
+                'street': parts[0],
+                'city': parts[1] if len(parts) > 1 else '',
+                'state': parts[2] if len(parts) > 2 else '',
+                'country': 'United States',
+                'format': 'jsonv2',
                 'limit': 1,
-                'addressdetails': 1
+                'countrycodes': 'us'
             }
-            headers = {
-                'User-Agent': 'WildfireFloodRiskAssessment/1.0 (Educational Project)',
-                'Accept': 'application/json'
+        else:
+            search_query = address if address.lower().endswith('usa') else f"{address}, USA"
+            params = {
+                'q': search_query,
+                'format': 'jsonv2',
+                'limit': 1,
+                'countrycodes': 'us'
             }
-            
-            print(f"Geocoding attempt: {query}")
-            
-            response = requests.get(url, params=params, headers=headers, timeout=10)
-            response.raise_for_status()
-            
-            data = response.json()
-            
-            if data and len(data) > 0:
-                result = data[0]
-                print(f"✓ Found: {result['display_name']}")
-                return {
-                    'lat': float(result['lat']),
-                    'lng': float(result['lon']),
-                    'display_name': result['display_name'],
-                    'type': result.get('type', 'unknown'),
-                    'address': result.get('address', {})
-                }
-            
-            # Rate limit: wait 1 second between attempts
-            time.sleep(1)
-        
-        # If all attempts failed
-        print(f"✗ No results found for: {address}")
-        return None
-        
-    except requests.exceptions.Timeout:
-        print(f"Geocoding timeout for: {address}")
-        return None
+
+        response = requests.get(url, params=params, headers=headers, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+
+        if data and len(data) > 0:
+            result = data[0]
+            print(f"  ✓ OpenStreetMap succeeded.")
+            return {
+                'lat': float(result['lat']),
+                'lng': float(result['lon']),
+                'display_name': result.get('display_name', address),
+                'type': result.get('type', 'unknown')
+            }
     except Exception as e:
-        print(f"Geocoding failed: {e}")
-        return None
+        print(f"    OSM attempt failed: {e}")
+
+    # --- Attempt 2: US Census Bureau Geocoder (Fallback) ---
+    print(f"  ⚠ OpenStreetMap failed. Falling back to US Census Geocoder...")
+    try:
+        url = "https://geocoding.geo.census.gov/geocoder/locations/onelineaddress"
+        params = {
+            'address': address,
+            'benchmark': 'Public_AR_Current',
+            'format': 'json'
+        }
+        response = requests.get(url, params=params, timeout=15)
+        response.raise_for_status()
+        data = response.json()
+
+        if data.get('result', {}).get('addressMatches'):
+            match = data['result']['addressMatches'][0]
+            coords = match['coordinates']
+            print(f"  ✓ US Census Geocoder succeeded.")
+            return {
+                'lat': float(coords['y']),  # Census uses y=lat, x=lng
+                'lng': float(coords['x']),
+                'display_name': match.get('matchedAddress', address),
+                'type': 'census'
+            }
+    except Exception as e:
+        print(f"    Census geocoder also failed: {e}")
+
+    # --- All attempts failed ---
+    print(f"  ✗ All geocoding attempts failed for: {address}")
+    return None
 
 def get_historical_trends(lat, lng):
     """
